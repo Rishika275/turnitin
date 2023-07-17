@@ -37,51 +37,88 @@ public class MembershipService {
 					return CompletableFuture.allOf(userCalls)
 							.thenApply(nil -> members);
 				});
+	//		CompletableFuture<UserList> usersList = membershipBackendClient.fetchUsers();
+	//
+	//		return membershipBackendClient.fetchMemberships()
+	//				.thenCombine(usersList, (memberships, users) -> {
+	//					Map<String, User> userMap = users.getUsers().stream()
+	//							.collect(Collectors.toMap(User::getId, user -> user));
+	//
+	//					for (Membership membership : memberships.getMemberships()) {
+	//						User user = userMap.get(membership.getUserId());
+	//						membership.setUser(user);
+	//					}
+	//
+	//					return memberships;
+	//				});
+
+	CompletableFuture<UserList> usersList = membershipBackendClient.fetchUsers();
+		return membershipBackendClient.fetchMemberships()
+				.thenCombine(usersList, (memberships, users) -> {
+							Map<String, User> userMap = users.getUsers().stream()
+									.collect(Collectors.toMap(User::getId, user -> user));
+
+              CompletableFuture<Void>[] members = memberships.getMemberships().stream()
+                  .map(membership -> {
+                      User user = userMap.get(membership.getUserId());
+                      membership.setUser(user);
+                      return CompletableFuture.completedFuture(null);
+                  })
+                  .toArray(CompletableFuture[]::new);
+
+                  return CompletableFuture.allOf(members)
+                  .thenApply(nil -> memberships);
+					});
+	 ================
+	CompletableFuture<UserList> usersList = membershipBackendClient.fetchUsers();
+	return membershipBackendClient.fetchMemberships()
+	.thenCombine(usersList, (memberships, users) -> {
+	Map<String, User> userMap = users.getUsers().stream()
+	.collect(Collectors.toMap(User::getId, user -> user));
+	memberships.getMemberships().forEach(membership -> {
+	User user = userMap.get(membership.getUserId());
+	membership.setUser(user);
+	});
+	return memberships;
+	});
+
 
 	 */
-	public CompletableFuture<MembershipList> fetchAllMembershipsWithUsers() {
-//		CompletableFuture<UserList> usersList = membershipBackendClient.fetchUsers();
-//
+	private CompletableFuture<UserList> getAllUsers(){
+		return membershipBackendClient.fetchUsers();
+	}
+//	public CompletableFuture<MembershipList> fetchAllMembershipsWithUsers() {
+//		CompletableFuture<UserList> usersList = getAllUsers();
 //		return membershipBackendClient.fetchMemberships()
 //				.thenCombine(usersList, (memberships, users) -> {
 //					Map<String, User> userMap = users.getUsers().stream()
 //							.collect(Collectors.toMap(User::getId, user -> user));
-//
-//					for (Membership membership : memberships.getMemberships()) {
+//					memberships.getMemberships().forEach(membership -> {
 //						User user = userMap.get(membership.getUserId());
 //						membership.setUser(user);
-//					}
+//					});
+//					CompletableFuture<?>[] members = memberships.getMemberships().stream()
+//							.map(membership -> CompletableFuture.completedFuture(membership))
+//							.toArray(CompletableFuture[]::new);
 //
-//					return memberships;
+//					return CompletableFuture.allOf(members)
+//							.thenApply(nil -> memberships);
 //				});
-		CompletableFuture<UserList> usersList = membershipBackendClient.fetchUsers();
-//		if(userList == null )
-//		{
-//			throw new NullPointerException("UserList is null");
-//		}
+//	}
+
+	public CompletableFuture<MembershipList> fetchAllMembershipsWithUsers() {
+		Map<String, User> usersMapFuture = membershipBackendClient.fetchUsers()
+				.thenCompose(users -> {})
+				.thenApply(users -> users.stream().collect(Collectors.toMap(User::getId, user -> user)));
+
 		return membershipBackendClient.fetchMemberships()
-				.thenCombine(usersList, (memberships, users) -> {
-					if (users == null) {
-						// Handle null users appropriately
-						throw new IllegalStateException("Users list is null.");
-					}
-
-					Map<String, User> userMap = users.getUsers().stream()
-							.collect(Collectors.toMap(User::getId, user -> user));
-
-					for (Membership membership : memberships.getMemberships()) {
-						String userId = membership.getUserId();
-						if (userId != null) {
-							User user = userMap.get(userId);
-							membership.setUser(user);
-						} else {
-							// Handle null user ID appropriately
-							throw new IllegalStateException("Membership user ID is null.");
-						}
-					}
-
-					return memberships;
+				.thenCompose(members -> {
+					CompletableFuture<?>[] userCalls = members.getMemberships().stream()
+							.map(member -> usersMapFuture.get(member.getUserId())
+									.thenApply(member::setUser))
+							.toArray(CompletableFuture<?>[]::new);
+					return CompletableFuture.allOf(userCalls)
+							.thenApply(nil -> members);
 				});
-
 	}
 }

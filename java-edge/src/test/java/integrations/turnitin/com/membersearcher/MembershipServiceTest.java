@@ -64,7 +64,6 @@ public class MembershipServiceTest {
 
 	@Test
 	public void TestFetchAllMemberships() throws Exception {
-
 		MembershipList members = membershipService.fetchAllMembershipsWithUsers().get();
 		assertThat(members.getMemberships().get(0).getUser()).isEqualTo(userOne);
 		assertThat(members.getMemberships().get(1).getUser()).isEqualTo(userTwo);

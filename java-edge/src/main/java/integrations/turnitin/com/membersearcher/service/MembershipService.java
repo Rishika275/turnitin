@@ -1,9 +1,9 @@
 package integrations.turnitin.com.membersearcher.service;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.HashMap;
+import java.util.List;
 
 import integrations.turnitin.com.membersearcher.client.MembershipBackendClient;
 import integrations.turnitin.com.membersearcher.model.MembershipList;
@@ -38,19 +38,19 @@ public class MembershipService {
 		CompletableFuture<UserList> userList = membershipBackendClient.fetchUsers();
 
 		CompletableFuture<MembershipList> membershipListWithUsers = membershipBackendClient.fetchMemberships()
-				.thenCombine(
-						userList,
-						(memberships, users) -> {
-							HashMap<String, User> userMap = users.getUsers().stream()
-									.collect(Collectors.toMap(User::getId, user -> user, (u1, u2) -> u1, HashMap::new));
+			.thenCombine(
+				userList,
+				(memberships, users) -> {
+					HashMap<String, User> userMap = users.getUsers().stream()
+						.collect(Collectors.toMap(User::getId, user -> user, (u1, u2) -> u1, HashMap::new));
 
-							memberships.getMemberships().forEach(membership -> {
-								User matchingUser = userMap.get(membership.getUserId());
-								membership.setUser(matchingUser);
-							});
-							return memberships;
-						}
-				);
+					memberships.getMemberships().forEach(membership -> {
+						User matchingUser = userMap.get(membership.getUserId());
+						membership.setUser(matchingUser);
+					});
+					return memberships;
+				}
+			);
 		return membershipListWithUsers;
 	}
 }

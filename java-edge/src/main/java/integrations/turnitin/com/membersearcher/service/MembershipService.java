@@ -1,10 +1,15 @@
 package integrations.turnitin.com.membersearcher.service;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.List;
 
 import integrations.turnitin.com.membersearcher.client.MembershipBackendClient;
 import integrations.turnitin.com.membersearcher.model.MembershipList;
+import integrations.turnitin.com.membersearcher.model.User;
 
+import integrations.turnitin.com.membersearcher.model.UserList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,22 +19,38 @@ public class MembershipService {
 	private MembershipBackendClient membershipBackendClient;
 
 	/**
+	 *
 	 * Method to fetch all memberships with their associated user details included.
-	 * This method calls out to the php-backend service and fetches all memberships,
-	 * it then calls to fetch the user details for each user individually and
-	 * associates them with their corresponding membership.
+	 * This method calls out to the php-backend service and fetches all users
+	 * and fetches all memberships.
+	 * It then creates a HashMap( UserMap) with all the users where
+	 * user_id is the key and the User object as value
+	 * It iterates through the memberships and retrieves the associated user from the userMap
+	 * based on the user ID in each membership.
+	 * It updates the membership by setting the retrieved user as its associated user.
+	 *
 	 *
 	 * @return A CompletableFuture containing a fully populated MembershipList object.
+	 *
 	 */
+
 	public CompletableFuture<MembershipList> fetchAllMembershipsWithUsers() {
-		return membershipBackendClient.fetchMemberships()
-				.thenCompose(members -> {
-					CompletableFuture<?>[] userCalls = members.getMemberships().stream()
-							.map(member -> membershipBackendClient.fetchUser(member.getUserId())
-									.thenApply(member::setUser))
-							.toArray(CompletableFuture<?>[]::new);
-					return CompletableFuture.allOf(userCalls)
-							.thenApply(nil -> members);
-				});
+		CompletableFuture<UserList> userList = membershipBackendClient.fetchUsers();
+
+		CompletableFuture<MembershipList> membershipListWithUsers = membershipBackendClient.fetchMemberships()
+			.thenCombine(
+				userList,
+				(memberships, users) -> {
+					HashMap<String, User> userMap = users.getUsers().stream()
+						.collect(Collectors.toMap(User::getId, user -> user, (u1, u2) -> u1, HashMap::new));
+
+					memberships.getMemberships().forEach(membership -> {
+						User matchingUser = userMap.get(membership.getUserId());
+						membership.setUser(matchingUser);
+					});
+					return memberships;
+				}
+			);
+		return membershipListWithUsers;
 	}
 }

@@ -19,10 +19,16 @@ public class MembershipService {
 	private MembershipBackendClient membershipBackendClient;
 
 	/**
+	 *
 	 * Method to fetch all memberships with their associated user details included.
-	 * This method calls out to the php-backend service and fetches all memberships,
-	 * it then calls to fetch the user details for each user individually and
-	 * associates them with their corresponding membership.
+	 * This method calls out to the php-backend service and fetches all users
+	 * and fetches all memberships.
+	 * It then creates a HashMap( UserMap) with all the users where
+	 * user_id is the key and the User object as value
+	 * It iterates through the memberships and retrieves the associated user from the userMap
+	 * based on the user ID in each membership.
+	 * It updates the membership by setting the retrieved user as its associated user.
+	 *
 	 *
 	 * @return A CompletableFuture containing a fully populated MembershipList object.
 	 *

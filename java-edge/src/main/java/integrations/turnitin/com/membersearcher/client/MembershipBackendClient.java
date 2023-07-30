@@ -47,7 +47,6 @@ public class MembershipBackendClient {
 	}
 
 	public CompletableFuture<UserList> fetchUsers() {
-		System.out.println(makeRequest("GET", backendHost + "/api.php/users", null, UserList.class));
 		return makeRequest("GET", backendHost + "/api.php/users", null, UserList.class);
 	}
 
